@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Language" content="zh-cn" />
+<title>canvas音乐频谱</title>
+<style>
+	body {margin:0;background:#353440;}
+	#cvs {display:block;margin:0 auto;}
+</style>
+</head>
+<body>
+
+<button onclick="$('a11').play()">aaa</button>
+	<canvas id="cvs"></canvas>
+	<audio id='a11' src="a.mp3" id="audio" loop></audio>
+
+
+<script src="https://libs.baidu.com/jquery/2.0.3/jquery.min.js"></script>
+<script>
+
+	window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext;
+	
+	if( typeof window.AudioContext != 'undefined' ) {
+
+		var audio = document.getElementById('audio');
+		var ctx = new AudioContext();
+		var analyser = ctx.createAnalyser();
+		var audioSrc = ctx.createMediaElementSource(audio);
+		audioSrc.connect(analyser);
+		analyser.connect(ctx.destination);
+		var frequencyData = new Uint8Array(analyser.frequencyBinCount);
+		var cvs = document.getElementById('cvs');
+		cvs.width = 960;
+		cvs.height = 600;
+		var cwidth = cvs.width,
+			cheight = cvs.height,
+			meterWidth = 3, //柱宽
+			gap = 4, //柱间距
+			capHeight = 1,	//顶子的高度
+			capStyle = '#fff',
+			meterNum = 1500/10, //count of the meters
+			capYPositionArray = []; ////store the vertical position of hte caps for the preivous frame
+		ctx = cvs.getContext('2d');
+		// loop
+		function renderFrame() {
+			var array = new Uint8Array(analyser.frequencyBinCount);
+			analyser.getByteFrequencyData(array);
+			var step = Math.round(array.length / meterNum); //sample limited data from the total array
+			ctx.clearRect(0, 0, cwidth, cheight);
+			for (var i = 0; i < meterNum; i++) {
+				var value = array[i * step];
+				if (capYPositionArray.length < Math.round(meterNum)) {
+					capYPositionArray.push(value);
+				};
+				ctx.fillStyle = capStyle;
+				//draw the cap, with transition effect
+				if (value < capYPositionArray[i]) {
+					ctx.fillRect(i *(meterWidth+gap), cheight - (--capYPositionArray[i]), meterWidth, capHeight);
+				} else {
+					ctx.fillRect(i *(meterWidth+gap), cheight - value, meterWidth, capHeight);
+					capYPositionArray[i] = value;
+				};
+				ctx.fillStyle = '#90c400'; //set the filllStyle to gradient for a better look
+				ctx.fillRect(i *(meterWidth+gap), cheight - value + capHeight, meterWidth, cheight); //the meter
+			}
+			requestAnimationFrame(renderFrame);
+		}
+
+		renderFrame();
+		audio.play();
+		
+	}
+
+</script>
+</body>
+</html>
